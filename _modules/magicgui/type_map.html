@@ -5,30 +5,18 @@
 <span class=kn >import</span> <span class=nn >datetime</span>
 <span class=kn >import</span> <span class=nn >inspect</span>
 <span class=kn >import</span> <span class=nn >pathlib</span>
-<span class=kn >import</span> <span class=nn >sys</span>
 <span class=kn >import</span> <span class=nn >types</span>
 <span class=kn >import</span> <span class=nn >warnings</span>
-<span class=kn >from</span> <span class=nn >collections</span> <span class=kn >import</span> <span class=n >abc</span><span class=p >,</span> <span class=n >defaultdict</span>
+<span class=kn >from</span> <span class=nn >collections</span> <span class=kn >import</span> <span class=n >defaultdict</span>
 <span class=kn >from</span> <span class=nn >enum</span> <span class=kn >import</span> <span class=n >EnumMeta</span>
-<span class=kn >from</span> <span class=nn >typing</span> <span class=kn >import</span> <span class=p >(</span>
-    <span class=n >Any</span><span class=p >,</span>
-    <span class=n >Callable</span><span class=p >,</span>
-    <span class=n >DefaultDict</span><span class=p >,</span>
-    <span class=n >ForwardRef</span><span class=p >,</span>
-    <span class=n >Type</span><span class=p >,</span>
-    <span class=n >TypeVar</span><span class=p >,</span>
-    <span class=n >Union</span><span class=p >,</span>
-    <span class=n >cast</span><span class=p >,</span>
-    <span class=n >overload</span><span class=p >,</span>
-<span class=p >)</span>
+<span class=kn >from</span> <span class=nn >typing</span> <span class=kn >import</span> <span class=n >Any</span><span class=p >,</span> <span class=n >Callable</span><span class=p >,</span> <span class=n >DefaultDict</span><span class=p >,</span> <span class=n >ForwardRef</span><span class=p >,</span> <span class=n >Type</span><span class=p >,</span> <span class=n >TypeVar</span><span class=p >,</span> <span class=n >cast</span><span class=p >,</span> <span class=n >overload</span>
 
-<span class=kn >from</span> <span class=nn >typing_extensions</span> <span class=kn >import</span> <span class=n >Literal</span><span class=p >,</span> <span class=n >get_args</span><span class=p >,</span> <span class=n >get_origin</span>
+<span class=kn >from</span> <span class=nn >typing_extensions</span> <span class=kn >import</span> <span class=n >Literal</span>
 
 <span class=kn >from</span> <span class=nn >magicgui</span> <span class=kn >import</span> <span class=n >widgets</span>
 <span class=kn >from</span> <span class=nn >magicgui.types</span> <span class=kn >import</span> <span class=p >(</span>
     <span class=n >PathLike</span><span class=p >,</span>
     <span class=n >ReturnCallback</span><span class=p >,</span>
-    <span class=n >TypeMatcher</span><span class=p >,</span>
     <span class=n >WidgetClass</span><span class=p >,</span>
     <span class=n >WidgetOptions</span><span class=p >,</span>
     <span class=n >WidgetRef</span><span class=p >,</span>
@@ -36,7 +24,9 @@
 <span class=p >)</span>
 <span class=kn >from</span> <span class=nn >magicgui.widgets._protocols</span> <span class=kn >import</span> <span class=n >WidgetProtocol</span><span class=p >,</span> <span class=n >assert_protocol</span>
 
-<span class=n >__all__</span><span class=p >:</span> <span class=nb >list</span><span class=p >[</span><span class=nb >str</span><span class=p >]</span> <span class=o >=</span> <span class=p >[</span><span class=s2 >"register_type"</span><span class=p >,</span> <span class=s2 >"get_widget_class"</span><span class=p >,</span> <span class=s2 >"type_matcher"</span><span class=p >]</span>
+<span class=kn >from</span> <span class=nn >._type_wrapper</span> <span class=kn >import</span> <span class=n >TypeWrapper</span><span class=p >,</span> <span class=n >resolve_annotation</span>
+
+<span class=n >__all__</span><span class=p >:</span> <span class=nb >list</span><span class=p >[</span><span class=nb >str</span><span class=p >]</span> <span class=o >=</span> <span class=p >[</span><span class=s2 >"register_type"</span><span class=p >,</span> <span class=s2 >"get_widget_class"</span><span class=p >]</span>
 
 
 <span class=k >class</span> <span class=nc >MissingWidget</span><span class=p >(</span><span class=ne >RuntimeError</span><span class=p >):</span>
@@ -44,8 +34,6 @@
 
 
 <span class=n >_RETURN_CALLBACKS</span><span class=p >:</span> <span class=n >DefaultDict</span><span class=p >[</span><span class=nb >type</span><span class=p >,</span> <span class=nb >list</span><span class=p >[</span><span class=n >ReturnCallback</span><span class=p >]]</span> <span class=o >=</span> <span class=n >defaultdict</span><span class=p >(</span><span class=nb >list</span><span class=p >)</span>
-<span class=n >_RETURN_MATCHERS</span><span class=p >:</span> <span class=nb >list</span><span class=p >[</span><span class=n >TypeMatcher</span><span class=p >]</span> <span class=o >=</span> <span class=nb >list</span><span class=p >()</span>
-<span class=n >_TYPE_MATCHERS</span><span class=p >:</span> <span class=nb >list</span><span class=p >[</span><span class=n >TypeMatcher</span><span class=p >]</span> <span class=o >=</span> <span class=nb >list</span><span class=p >()</span>
 <span class=n >_TYPE_DEFS</span><span class=p >:</span> <span class=nb >dict</span><span class=p >[</span><span class=nb >type</span><span class=p >,</span> <span class=n >WidgetTuple</span><span class=p >]</span> <span class=o >=</span> <span class=nb >dict</span><span class=p >()</span>
 
 
@@ -55,76 +43,6 @@
         <span class=k >return</span> <span class=nb >issubclass</span><span class=p >(</span><span class=n >obj</span><span class=p >,</span> <span class=n >superclass</span><span class=p >)</span>
     <span class=k >except</span> <span class=ne >Exception</span><span class=p >:</span>
         <span class=k >return</span> <span class=kc >False</span>
-
-
-<span class=k >def</span> <span class=nf >_evaluate_forwardref</span><span class=p >(</span><span class=n >type_</span><span class=p >:</span> <span class=n >Any</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >Any</span><span class=p >:</span>
-    <span class=sd >"""Convert typing.ForwardRef into an actual object."""</span>
-    <span class=k >if</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >type_</span><span class=p >,</span> <span class=nb >str</span><span class=p >):</span>
-        <span class=n >type_</span> <span class=o >=</span> <span class=n >ForwardRef</span><span class=p >(</span><span class=n >type_</span><span class=p >)</span>
-
-    <span class=k >if</span> <span class=ow >not</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >type_</span><span class=p >,</span> <span class=n >ForwardRef</span><span class=p >):</span>
-        <span class=k >return</span> <span class=n >type_</span>
-
-    <span class=kn >from</span> <span class=nn >importlib</span> <span class=kn >import</span> <span class=n >import_module</span>
-
-    <span class=k >try</span><span class=p >:</span>
-        <span class=n >_module</span> <span class=o >=</span> <span class=n >type_</span><span class=o >.</span><span class=n >__forward_arg__</span><span class=o >.</span><span class=n >split</span><span class=p >(</span><span class=s2 >"."</span><span class=p >,</span> <span class=n >maxsplit</span><span class=o >=</span><span class=mi >1</span><span class=p >)[</span><span class=mi >0</span><span class=p >]</span>
-        <span class=n >globalns</span> <span class=o >=</span> <span class=nb >globals</span><span class=p >()</span><span class=o >.</span><span class=n >copy</span><span class=p >()</span>
-        <span class=n >globalns</span><span class=o >.</span><span class=n >update</span><span class=p >({</span><span class=n >_module</span><span class=p >:</span> <span class=n >import_module</span><span class=p >(</span><span class=n >_module</span><span class=p >)})</span>
-    <span class=k >except</span> <span class=ne >ImportError</span> <span class=k >as</span> <span class=n >e</span><span class=p >:</span>
-        <span class=k >raise</span> <span class=ne >ImportError</span><span class=p >(</span>
-            <span class=s2 >"Could not resolve the magicgui forward reference annotation: "</span>
-            <span class=sa >f</span><span class=s2 >"</span><span class=si >{</span><span class=n >type_</span><span class=o >.</span><span class=n >__forward_arg__</span><span class=si >!r}</span><span class=s2 >."</span>
-        <span class=p >)</span> <span class=kn >from</span> <span class=nn >e</span>
-
-    <span class=k >if</span> <span class=n >sys</span><span class=o >.</span><span class=n >version_info</span> <span class=o >&lt;</span> <span class=p >(</span><span class=mi >3</span><span class=p >,</span> <span class=mi >9</span><span class=p >):</span>
-        <span class=k >return</span> <span class=n >type_</span><span class=o >.</span><span class=n >_evaluate</span><span class=p >(</span><span class=n >globalns</span><span class=p >,</span> <span class=p >{})</span>
-    <span class=c1 ># Even though it is the right signature for python 3.9, mypy complains with</span>
-    <span class=c1 ># `error: Too many arguments for "_evaluate" of "ForwardRef"` hence the cast...</span>
-    <span class=k >return</span> <span class=n >cast</span><span class=p >(</span><span class=n >Any</span><span class=p >,</span> <span class=n >type_</span><span class=p >)</span><span class=o >.</span><span class=n >_evaluate</span><span class=p >(</span><span class=n >globalns</span><span class=p >,</span> <span class=p >{},</span> <span class=nb >set</span><span class=p >())</span>
-
-
-<span class=k >def</span> <span class=nf >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >:</span> <span class=n >Any</span><span class=p >,</span> <span class=n >annotation</span><span class=p >:</span> <span class=n >Any</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=nb >tuple</span><span class=p >[</span><span class=nb >type</span><span class=p >,</span> <span class=nb >bool</span><span class=p >]:</span>
-    <span class=sd >"""Return annotation type origin or dtype of value."""</span>
-    <span class=k >if</span> <span class=ow >not</span> <span class=n >annotation</span><span class=p >:</span>
-        <span class=k >return</span> <span class=nb >type</span><span class=p >(</span><span class=n >value</span><span class=p >),</span> <span class=kc >False</span>
-    <span class=k >if</span> <span class=n >annotation</span> <span class=ow >is</span> <span class=n >inspect</span><span class=o >.</span><span class=n >Parameter</span><span class=o >.</span><span class=n >empty</span><span class=p >:</span>
-        <span class=k >return</span> <span class=nb >type</span><span class=p >(</span><span class=n >value</span><span class=p >),</span> <span class=kc >False</span>
-
-    <span class=c1 ># look for Optional[Type], which manifests as Union[Type, None]</span>
-    <span class=n >origin</span> <span class=o >=</span> <span class=n >get_origin</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-    <span class=n >args</span> <span class=o >=</span> <span class=n >get_args</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >origin</span> <span class=ow >is</span> <span class=n >Union</span> <span class=ow >and</span> <span class=nb >len</span><span class=p >(</span><span class=n >args</span><span class=p >)</span> <span class=o >==</span> <span class=mi >2</span> <span class=ow >and</span> <span class=nb >type</span><span class=p >(</span><span class=kc >None</span><span class=p >)</span> <span class=ow >in</span> <span class=n >args</span><span class=p >:</span>
-        <span class=n >type_</span> <span class=o >=</span> <span class=nb >next</span><span class=p >(</span><span class=n >i</span> <span class=k >for</span> <span class=n >i</span> <span class=ow >in</span> <span class=n >args</span> <span class=k >if</span> <span class=ow >not</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >i</span><span class=p >,</span> <span class=nb >type</span><span class=p >(</span><span class=kc >None</span><span class=p >)))</span>
-        <span class=k >return</span> <span class=n >type_</span><span class=p >,</span> <span class=kc >True</span>
-    <span class=k >return</span> <span class=p >(</span><span class=n >origin</span> <span class=ow >or</span> <span class=n >annotation</span><span class=p >),</span> <span class=kc >False</span>
-
-
-<div class=viewcode-block  id=type_matcher ><a class=viewcode-back  href="../../api/_autosummary/magicgui.type_map.type_matcher.html#magicgui.type_map.type_matcher">[docs]</a><span class=k >def</span> <span class=nf >type_matcher</span><span class=p >(</span><span class=n >func</span><span class=p >:</span> <span class=n >TypeMatcher</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >TypeMatcher</span><span class=p >:</span>
-    <span class=sd >"""Add function to the set of type matchers.</span>
-
-<span class=sd >    Example</span>
-<span class=sd >    -------</span>
-<span class=sd >    &gt;&gt;&gt; @type_matcher</span>
-<span class=sd >    ... def str_to_line_edit(value, annotation):</span>
-<span class=sd >    ...     if annotation in (str, 'str') or type(str) is str:</span>
-<span class=sd >    ...         return widgets.LineEdit, {}</span>
-<span class=sd >    """</span>
-    <span class=n >_TYPE_MATCHERS</span><span class=o >.</span><span class=n >append</span><span class=p >(</span><span class=n >func</span><span class=p >)</span>
-    <span class=k >return</span> <span class=n >func</span></div>
-
-
-<span class=k >def</span> <span class=nf >return_matcher</span><span class=p >(</span><span class=n >func</span><span class=p >:</span> <span class=n >TypeMatcher</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >TypeMatcher</span><span class=p >:</span>
-    <span class=sd >"""Add function to the set of return matchers.</span>
-
-<span class=sd >    Example</span>
-<span class=sd >    -------</span>
-<span class=sd >    &gt;&gt;&gt; @return_matcher</span>
-<span class=sd >    ... def default_return_widget(value, annotation):</span>
-<span class=sd >    ...     return widgets.LineEdit, {}</span>
-<span class=sd >    """</span>
-    <span class=n >_RETURN_MATCHERS</span><span class=o >.</span><span class=n >append</span><span class=p >(</span><span class=n >func</span><span class=p >)</span>
-    <span class=k >return</span> <span class=n >func</span>
 
 
 <span class=n >_SIMPLE_ANNOTATIONS</span> <span class=o >=</span> <span class=p >{</span>
@@ -145,99 +63,29 @@
 <span class=p >}</span>
 
 
-<span class=nd >@type_matcher</span>
-<span class=k >def</span> <span class=nf >simple_types</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
+<span class=k >def</span> <span class=nf >match_type</span><span class=p >(</span><span class=n >tw</span><span class=p >:</span> <span class=n >TypeWrapper</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
     <span class=sd >"""Check simple type mappings."""</span>
-    <span class=k >if</span> <span class=n >annotation</span> <span class=ow >in</span> <span class=n >_SIMPLE_ANNOTATIONS</span><span class=p >:</span>
-        <span class=k >return</span> <span class=n >_SIMPLE_ANNOTATIONS</span><span class=p >[</span><span class=n >annotation</span><span class=p >],</span> <span class=p >{}</span>
+    <span class=n >_type</span> <span class=o >=</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span>
 
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
+    <span class=k >if</span> <span class=n >_type</span> <span class=ow >in</span> <span class=n >_SIMPLE_ANNOTATIONS</span><span class=p >:</span>
+        <span class=k >return</span> <span class=n >_SIMPLE_ANNOTATIONS</span><span class=p >[</span><span class=n >_type</span><span class=p >],</span> <span class=p >{}</span>
 
-    <span class=k >if</span> <span class=n >dtype</span> <span class=ow >is</span> <span class=n >widgets</span><span class=o >.</span><span class=n >ProgressBar</span><span class=p >:</span>
+    <span class=k >if</span> <span class=n >_type</span> <span class=ow >is</span> <span class=n >widgets</span><span class=o >.</span><span class=n >ProgressBar</span><span class=p >:</span>
         <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >ProgressBar</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"bind"</span><span class=p >:</span> <span class=k >lambda</span> <span class=n >widget</span><span class=p >:</span> <span class=n >widget</span><span class=p >,</span> <span class=s2 >"visible"</span><span class=p >:</span> <span class=kc >True</span><span class=p >}</span>
 
-    <span class=k >if</span> <span class=n >dtype</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=p >:</span>
-        <span class=k >return</span> <span class=n >_SIMPLE_TYPES</span><span class=p >[</span><span class=n >dtype</span><span class=p >],</span> <span class=p >{}</span>
-    <span class=k >else</span><span class=p >:</span>
-        <span class=k >for</span> <span class=n >key</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=o >.</span><span class=n >keys</span><span class=p >():</span>
-            <span class=k >if</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >dtype</span><span class=p >,</span> <span class=n >key</span><span class=p >):</span>
-                <span class=k >return</span> <span class=n >_SIMPLE_TYPES</span><span class=p >[</span><span class=n >key</span><span class=p >],</span> <span class=p >{}</span>
+    <span class=k >if</span> <span class=n >_type</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=p >:</span>
+        <span class=k >return</span> <span class=n >_SIMPLE_TYPES</span><span class=p >[</span><span class=n >_type</span><span class=p >],</span> <span class=p >{}</span>
+    <span class=k >for</span> <span class=n >key</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=o >.</span><span class=n >keys</span><span class=p >():</span>
+        <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >is_subclass</span><span class=p >(</span><span class=n >key</span><span class=p >):</span>
+            <span class=k >return</span> <span class=n >_SIMPLE_TYPES</span><span class=p >[</span><span class=n >key</span><span class=p >],</span> <span class=p >{}</span>
+
+    <span class=k >if</span> <span class=n >_type</span> <span class=ow >in</span> <span class=p >(</span><span class=n >types</span><span class=o >.</span><span class=n >FunctionType</span><span class=p >,):</span>
+        <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >FunctionGui</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"function"</span><span class=p >:</span> <span class=n >tw</span><span class=o >.</span><span class=n >default</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
+
+    <span class=c1 ># sequence of paths</span>
+    <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >shape</span> <span class=ow >in</span> <span class=n >tw</span><span class=o >.</span><span class=n >SHAPE</span><span class=o >.</span><span class=n >SEQUENCE_LIKE</span> <span class=ow >and</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >tw</span><span class=o >.</span><span class=n >type_</span><span class=p >,</span> <span class=n >pathlib</span><span class=o >.</span><span class=n >Path</span><span class=p >):</span>
+        <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >FileEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"mode"</span><span class=p >:</span> <span class=s2 >"rm"</span><span class=p >}</span>
     <span class=k >return</span> <span class=kc >None</span>
-
-
-<span class=nd >@type_matcher</span>
-<span class=k >def</span> <span class=nf >callable_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
-    <span class=sd >"""Determine if value/annotation is a function type."""</span>
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-
-    <span class=k >if</span> <span class=n >dtype</span> <span class=ow >in</span> <span class=p >(</span><span class=n >types</span><span class=o >.</span><span class=n >FunctionType</span><span class=p >,):</span>
-        <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >FunctionGui</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"function"</span><span class=p >:</span> <span class=n >value</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
-    <span class=k >return</span> <span class=kc >None</span>
-
-
-<span class=nd >@type_matcher</span>
-<span class=k >def</span> <span class=nf >sequence_of_paths</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
-    <span class=sd >"""Determine if value/annotation is a Sequence[pathlib.Path]."""</span>
-    <span class=k >if</span> <span class=n >annotation</span><span class=p >:</span>
-        <span class=n >orig</span> <span class=o >=</span> <span class=n >get_origin</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-        <span class=n >args</span> <span class=o >=</span> <span class=n >get_args</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-        <span class=k >if</span> <span class=ow >not</span> <span class=p >(</span><span class=n >inspect</span><span class=o >.</span><span class=n >isclass</span><span class=p >(</span><span class=n >orig</span><span class=p >)</span> <span class=ow >and</span> <span class=n >args</span><span class=p >):</span>
-            <span class=k >return</span> <span class=kc >None</span>
-        <span class=k >if</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >orig</span><span class=p >,</span> <span class=n >abc</span><span class=o >.</span><span class=n >Sequence</span><span class=p >)</span> <span class=ow >or</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >orig</span><span class=p >,</span> <span class=n >abc</span><span class=o >.</span><span class=n >Sequence</span><span class=p >):</span>
-            <span class=k >if</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >args</span><span class=p >[</span><span class=mi >0</span><span class=p >],</span> <span class=n >pathlib</span><span class=o >.</span><span class=n >Path</span><span class=p >):</span>
-                <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >FileEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"mode"</span><span class=p >:</span> <span class=s2 >"rm"</span><span class=p >}</span>
-    <span class=k >elif</span> <span class=n >value</span><span class=p >:</span>
-        <span class=k >if</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >abc</span><span class=o >.</span><span class=n >Sequence</span><span class=p >)</span> <span class=ow >and</span> <span class=nb >all</span><span class=p >(</span>
-            <span class=nb >isinstance</span><span class=p >(</span><span class=n >v</span><span class=p >,</span> <span class=n >pathlib</span><span class=o >.</span><span class=n >Path</span><span class=p >)</span> <span class=k >for</span> <span class=n >v</span> <span class=ow >in</span> <span class=n >value</span>
-        <span class=p >):</span>
-            <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >FileEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"mode"</span><span class=p >:</span> <span class=s2 >"rm"</span><span class=p >}</span>
-    <span class=k >return</span> <span class=kc >None</span>
-
-
-<span class=k >def</span> <span class=nf >pick_widget_type</span><span class=p >(</span>
-    <span class=n >value</span><span class=p >:</span> <span class=n >Any</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
-    <span class=n >annotation</span><span class=p >:</span> <span class=nb >type</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
-    <span class=n >options</span><span class=p >:</span> <span class=n >WidgetOptions</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
-<span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span><span class=p >:</span>
-    <span class=sd >"""Pick the appropriate widget type for ``value`` with ``annotation``."""</span>
-    <span class=n >options</span> <span class=o >=</span> <span class=n >options</span> <span class=ow >or</span> <span class=p >{}</span>
-    <span class=n >annotation</span> <span class=o >=</span> <span class=n >_evaluate_forwardref</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >optional</span><span class=p >:</span>
-        <span class=n >options</span><span class=o >.</span><span class=n >setdefault</span><span class=p >(</span><span class=s2 >"nullable"</span><span class=p >,</span> <span class=kc >True</span><span class=p >)</span>
-    <span class=n >choices</span> <span class=o >=</span> <span class=n >options</span><span class=o >.</span><span class=n >get</span><span class=p >(</span><span class=s2 >"choices"</span><span class=p >)</span> <span class=ow >or</span> <span class=p >(</span><span class=nb >isinstance</span><span class=p >(</span><span class=n >dtype</span><span class=p >,</span> <span class=n >EnumMeta</span><span class=p >)</span> <span class=ow >and</span> <span class=n >dtype</span><span class=p >)</span>
-
-    <span class=k >if</span> <span class=s2 >"widget_type"</span> <span class=ow >in</span> <span class=n >options</span><span class=p >:</span>
-        <span class=n >widget_type</span> <span class=o >=</span> <span class=n >options</span><span class=o >.</span><span class=n >pop</span><span class=p >(</span><span class=s2 >"widget_type"</span><span class=p >)</span>
-        <span class=k >if</span> <span class=n >choices</span><span class=p >:</span>
-            <span class=k >if</span> <span class=n >widget_type</span> <span class=o >==</span> <span class=s2 >"RadioButton"</span><span class=p >:</span>
-                <span class=n >widget_type</span> <span class=o >=</span> <span class=s2 >"RadioButtons"</span>
-                <span class=n >warnings</span><span class=o >.</span><span class=n >warn</span><span class=p >(</span>
-                    <span class=sa >f</span><span class=s2 >"widget_type of 'RadioButton' (with dtype </span><span class=si >{</span><span class=n >dtype</span><span class=si >}</span><span class=s2 >) is being "</span>
-                    <span class=s2 >"coerced to 'RadioButtons' due to choices or Enum type."</span><span class=p >,</span>
-                    <span class=n >stacklevel</span><span class=o >=</span><span class=mi >2</span><span class=p >,</span>
-                <span class=p >)</span>
-            <span class=n >options</span><span class=o >.</span><span class=n >setdefault</span><span class=p >(</span><span class=s2 >"choices"</span><span class=p >,</span> <span class=n >choices</span><span class=p >)</span>
-        <span class=k >return</span> <span class=n >widget_type</span><span class=p >,</span> <span class=n >options</span>
-
-    <span class=c1 ># look for subclasses</span>
-    <span class=k >for</span> <span class=n >registered_type</span> <span class=ow >in</span> <span class=n >_TYPE_DEFS</span><span class=p >:</span>
-        <span class=k >if</span> <span class=n >dtype</span> <span class=o >==</span> <span class=n >registered_type</span> <span class=ow >or</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >dtype</span><span class=p >,</span> <span class=n >registered_type</span><span class=p >):</span>
-            <span class=n >_cls</span><span class=p >,</span> <span class=n >opts</span> <span class=o >=</span> <span class=n >_TYPE_DEFS</span><span class=p >[</span><span class=n >registered_type</span><span class=p >]</span>
-            <span class=k >return</span> <span class=n >_cls</span><span class=p >,</span> <span class=p >{</span><span class=o >**</span><span class=n >options</span><span class=p >,</span> <span class=o >**</span><span class=n >opts</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
-
-    <span class=k >if</span> <span class=n >choices</span><span class=p >:</span>
-        <span class=n >options</span><span class=p >[</span><span class=s2 >"choices"</span><span class=p >]</span> <span class=o >=</span> <span class=n >choices</span>
-        <span class=n >wdg</span> <span class=o >=</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Select</span> <span class=k >if</span> <span class=n >options</span><span class=o >.</span><span class=n >get</span><span class=p >(</span><span class=s2 >"allow_multiple"</span><span class=p >)</span> <span class=k >else</span> <span class=n >widgets</span><span class=o >.</span><span class=n >ComboBox</span>
-        <span class=k >return</span> <span class=n >wdg</span><span class=p >,</span> <span class=n >options</span>
-
-    <span class=k >for</span> <span class=n >matcher</span> <span class=ow >in</span> <span class=n >_TYPE_MATCHERS</span><span class=p >:</span>
-        <span class=n >_widget_type</span> <span class=o >=</span> <span class=n >matcher</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-        <span class=k >if</span> <span class=n >_widget_type</span><span class=p >:</span>
-            <span class=n >_cls</span><span class=p >,</span> <span class=n >opts</span> <span class=o >=</span> <span class=n >_widget_type</span>
-            <span class=k >return</span> <span class=n >_cls</span><span class=p >,</span> <span class=p >{</span><span class=o >**</span><span class=n >options</span><span class=p >,</span> <span class=o >**</span><span class=n >opts</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
-
-    <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >EmptyWidget</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"visible"</span><span class=p >:</span> <span class=kc >False</span><span class=p >}</span>
 
 
 <span class=n >_SIMPLE_RETURN_TYPES</span> <span class=o >=</span> <span class=p >[</span>
@@ -254,42 +102,47 @@
 <span class=p >]</span>
 
 
-<span class=nd >@return_matcher</span>
-<span class=k >def</span> <span class=nf >default_return_matcher</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
-    <span class=sd >"""Checks for 'simple' types that fit in a LineEdit."""</span>
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >dtype</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=p >:</span>
+<span class=k >def</span> <span class=nf >match_return_type</span><span class=p >(</span><span class=n >tw</span><span class=p >:</span> <span class=n >TypeWrapper</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
+    <span class=sd >"""Check simple type mappings for result widgets."""</span>
+    <span class=kn >import</span> <span class=nn >sys</span>
+
+    <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span> <span class=ow >in</span> <span class=n >_SIMPLE_TYPES</span><span class=p >:</span>
         <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >LineEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"gui_only"</span><span class=p >:</span> <span class=kc >True</span><span class=p >}</span>
-    <span class=k >else</span><span class=p >:</span>
-        <span class=k >return</span> <span class=kc >None</span>
 
+    <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span> <span class=ow >is</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Table</span><span class=p >:</span>
+        <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Table</span><span class=p >,</span> <span class=p >{}</span>
 
-<span class=nd >@return_matcher</span>
-<span class=k >def</span> <span class=nf >tabular_return_matcher</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span> <span class=o >|</span> <span class=kc >None</span><span class=p >:</span>
-    <span class=sd >"""Checks for tabular data."""</span>
-    <span class=c1 ># TODO: is this correct?</span>
-    <span class=k >if</span> <span class=n >annotation</span> <span class=o >==</span> <span class=n >inspect</span><span class=o >.</span><span class=n >_empty</span><span class=p >:</span>
-        <span class=k >return</span> <span class=kc >None</span>
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-    <span class=n >args</span> <span class=o >=</span> <span class=p >[</span><span class=n >_evaluate_forwardref</span><span class=p >(</span><span class=n >a</span><span class=p >)</span> <span class=k >for</span> <span class=n >a</span> <span class=ow >in</span> <span class=n >get_args</span><span class=p >(</span><span class=n >widgets</span><span class=o >.</span><span class=n >_table</span><span class=o >.</span><span class=n >TableData</span><span class=p >)]</span>
-    <span class=k >if</span> <span class=n >dtype</span> <span class=ow >in</span> <span class=n >args</span><span class=p >:</span>
+    <span class=n >table_types</span> <span class=o >=</span> <span class=p >[</span>
+        <span class=n >resolve_annotation</span><span class=p >(</span><span class=n >x</span><span class=p >,</span> <span class=n >sys</span><span class=o >.</span><span class=n >modules</span><span class=p >)</span>
+        <span class=k >for</span> <span class=n >x</span> <span class=ow >in</span> <span class=p >(</span><span class=s2 >"pandas.DataFrame"</span><span class=p >,</span> <span class=s2 >"numpy.ndarray"</span><span class=p >)</span>
+    <span class=p >]</span>
+
+    <span class=k >if</span> <span class=nb >any</span><span class=p >(</span><span class=n >tw</span><span class=o >.</span><span class=n >is_subclass</span><span class=p >(</span><span class=n >tt</span><span class=p >)</span> <span class=k >for</span> <span class=n >tt</span> <span class=ow >in</span> <span class=n >table_types</span> <span class=k >if</span> <span class=ow >not</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >tt</span><span class=p >,</span> <span class=n >ForwardRef</span><span class=p >)):</span>
         <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Table</span><span class=p >,</span> <span class=p >{}</span>
 
     <span class=k >return</span> <span class=kc >None</span>
 
 
-<span class=k >def</span> <span class=nf >return_widget_type</span><span class=p >(</span>
+<span class=k >def</span> <span class=nf >pick_widget_type</span><span class=p >(</span>
     <span class=n >value</span><span class=p >:</span> <span class=n >Any</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
-    <span class=n >annotation</span><span class=p >:</span> <span class=nb >type</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
+    <span class=n >annotation</span><span class=p >:</span> <span class=nb >type</span><span class=p >[</span><span class=n >Any</span><span class=p >]</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
     <span class=n >options</span><span class=p >:</span> <span class=n >WidgetOptions</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
+    <span class=n >is_result</span><span class=p >:</span> <span class=nb >bool</span> <span class=o >=</span> <span class=kc >False</span><span class=p >,</span>
 <span class=p >)</span> <span class=o >-&gt;</span> <span class=n >WidgetTuple</span><span class=p >:</span>
     <span class=sd >"""Pick the appropriate widget type for ``value`` with ``annotation``."""</span>
+    <span class=k >if</span> <span class=n >is_result</span> <span class=ow >and</span> <span class=n >annotation</span> <span class=ow >is</span> <span class=n >inspect</span><span class=o >.</span><span class=n >Parameter</span><span class=o >.</span><span class=n >empty</span><span class=p >:</span>
+        <span class=n >annotation</span> <span class=o >=</span> <span class=nb >str</span>
+    <span class=k >try</span><span class=p >:</span>
+        <span class=n >tw</span> <span class=o >=</span> <span class=n >TypeWrapper</span><span class=p >(</span><span class=n >annotation</span><span class=p >,</span> <span class=n >value</span><span class=p >)</span>
+    <span class=k >except</span> <span class=ne >ValueError</span><span class=p >:</span>
+        <span class=k >if</span> <span class=n >value</span> <span class=ow >is</span> <span class=kc >None</span><span class=p >:</span>
+            <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >EmptyWidget</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"visible"</span><span class=p >:</span> <span class=kc >False</span><span class=p >}</span>
+        <span class=k >raise</span>
+    <span class=n >tw</span><span class=o >.</span><span class=n >resolve</span><span class=p >()</span>
+    <span class=n >_type</span> <span class=o >=</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span>
     <span class=n >options</span> <span class=o >=</span> <span class=n >options</span> <span class=ow >or</span> <span class=p >{}</span>
-    <span class=n >annotation</span> <span class=o >=</span> <span class=n >_evaluate_forwardref</span><span class=p >(</span><span class=n >annotation</span><span class=p >)</span>
-    <span class=n >dtype</span><span class=p >,</span> <span class=n >optional</span> <span class=o >=</span> <span class=n >_normalize_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >optional</span><span class=p >:</span>
-        <span class=n >options</span><span class=o >.</span><span class=n >setdefault</span><span class=p >(</span><span class=s2 >"nullable"</span><span class=p >,</span> <span class=kc >True</span><span class=p >)</span>
-    <span class=n >choices</span> <span class=o >=</span> <span class=n >options</span><span class=o >.</span><span class=n >get</span><span class=p >(</span><span class=s2 >"choices"</span><span class=p >)</span> <span class=ow >or</span> <span class=p >(</span><span class=nb >isinstance</span><span class=p >(</span><span class=n >dtype</span><span class=p >,</span> <span class=n >EnumMeta</span><span class=p >)</span> <span class=ow >and</span> <span class=n >dtype</span><span class=p >)</span>
+    <span class=n >options</span><span class=o >.</span><span class=n >setdefault</span><span class=p >(</span><span class=s2 >"nullable"</span><span class=p >,</span> <span class=ow >not</span> <span class=n >tw</span><span class=o >.</span><span class=n >required</span><span class=p >)</span>
+    <span class=n >choices</span> <span class=o >=</span> <span class=n >options</span><span class=o >.</span><span class=n >get</span><span class=p >(</span><span class=s2 >"choices"</span><span class=p >)</span> <span class=ow >or</span> <span class=p >(</span><span class=nb >isinstance</span><span class=p >(</span><span class=n >_type</span><span class=p >,</span> <span class=n >EnumMeta</span><span class=p >)</span> <span class=ow >and</span> <span class=n >_type</span><span class=p >)</span>
 
     <span class=k >if</span> <span class=s2 >"widget_type"</span> <span class=ow >in</span> <span class=n >options</span><span class=p >:</span>
         <span class=n >widget_type</span> <span class=o >=</span> <span class=n >options</span><span class=o >.</span><span class=n >pop</span><span class=p >(</span><span class=s2 >"widget_type"</span><span class=p >)</span>
@@ -297,8 +150,8 @@
             <span class=k >if</span> <span class=n >widget_type</span> <span class=o >==</span> <span class=s2 >"RadioButton"</span><span class=p >:</span>
                 <span class=n >widget_type</span> <span class=o >=</span> <span class=s2 >"RadioButtons"</span>
                 <span class=n >warnings</span><span class=o >.</span><span class=n >warn</span><span class=p >(</span>
-                    <span class=sa >f</span><span class=s2 >"widget_type of 'RadioButton' (with dtype </span><span class=si >{</span><span class=n >dtype</span><span class=si >}</span><span class=s2 >) is being "</span>
-                    <span class=s2 >"coerced to 'RadioButtons' due to choices or Enum type."</span><span class=p >,</span>
+                    <span class=sa >f</span><span class=s2 >"widget_type of 'RadioButton' (with dtype </span><span class=si >{</span><span class=n >tw</span><span class=o >.</span><span class=n >_type_display</span><span class=p >()</span><span class=si >}</span><span class=s2 >) is"</span>
+                    <span class=s2 >" being coerced to 'RadioButtons' due to choices or Enum type."</span><span class=p >,</span>
                     <span class=n >stacklevel</span><span class=o >=</span><span class=mi >2</span><span class=p >,</span>
                 <span class=p >)</span>
             <span class=n >options</span><span class=o >.</span><span class=n >setdefault</span><span class=p >(</span><span class=s2 >"choices"</span><span class=p >,</span> <span class=n >choices</span><span class=p >)</span>
@@ -306,23 +159,34 @@
 
     <span class=c1 ># look for subclasses</span>
     <span class=k >for</span> <span class=n >registered_type</span> <span class=ow >in</span> <span class=n >_TYPE_DEFS</span><span class=p >:</span>
-        <span class=k >if</span> <span class=n >dtype</span> <span class=o >==</span> <span class=n >registered_type</span> <span class=ow >or</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >dtype</span><span class=p >,</span> <span class=n >registered_type</span><span class=p >):</span>
+        <span class=k >if</span> <span class=n >_type</span> <span class=o >==</span> <span class=n >registered_type</span> <span class=ow >or</span> <span class=n >tw</span><span class=o >.</span><span class=n >is_subclass</span><span class=p >(</span><span class=n >registered_type</span><span class=p >):</span>
             <span class=n >_cls</span><span class=p >,</span> <span class=n >opts</span> <span class=o >=</span> <span class=n >_TYPE_DEFS</span><span class=p >[</span><span class=n >registered_type</span><span class=p >]</span>
             <span class=k >return</span> <span class=n >_cls</span><span class=p >,</span> <span class=p >{</span><span class=o >**</span><span class=n >options</span><span class=p >,</span> <span class=o >**</span><span class=n >opts</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
 
-    <span class=k >for</span> <span class=n >matcher</span> <span class=ow >in</span> <span class=n >_RETURN_MATCHERS</span><span class=p >:</span>
-        <span class=n >_widget_type</span> <span class=o >=</span> <span class=n >matcher</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >)</span>
+    <span class=k >if</span> <span class=n >is_result</span><span class=p >:</span>
+        <span class=n >_widget_type</span> <span class=o >=</span> <span class=n >match_return_type</span><span class=p >(</span><span class=n >tw</span><span class=p >)</span>
         <span class=k >if</span> <span class=n >_widget_type</span><span class=p >:</span>
             <span class=n >_cls</span><span class=p >,</span> <span class=n >opts</span> <span class=o >=</span> <span class=n >_widget_type</span>
             <span class=k >return</span> <span class=n >_cls</span><span class=p >,</span> <span class=p >{</span><span class=o >**</span><span class=n >options</span><span class=p >,</span> <span class=o >**</span><span class=n >opts</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
+        <span class=c1 ># Chosen for backwards/test compatibility</span>
+        <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >LineEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"gui_only"</span><span class=p >:</span> <span class=kc >True</span><span class=p >}</span>
 
-    <span class=c1 ># Chosen for backwards/test compatibility</span>
-    <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >LineEdit</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"gui_only"</span><span class=p >:</span> <span class=kc >True</span><span class=p >}</span>
+    <span class=k >if</span> <span class=n >choices</span><span class=p >:</span>
+        <span class=n >options</span><span class=p >[</span><span class=s2 >"choices"</span><span class=p >]</span> <span class=o >=</span> <span class=n >choices</span>
+        <span class=n >wdg</span> <span class=o >=</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Select</span> <span class=k >if</span> <span class=n >options</span><span class=o >.</span><span class=n >get</span><span class=p >(</span><span class=s2 >"allow_multiple"</span><span class=p >)</span> <span class=k >else</span> <span class=n >widgets</span><span class=o >.</span><span class=n >ComboBox</span>
+        <span class=k >return</span> <span class=n >wdg</span><span class=p >,</span> <span class=n >options</span>
+
+    <span class=n >_widget_type</span> <span class=o >=</span> <span class=n >match_type</span><span class=p >(</span><span class=n >tw</span><span class=p >)</span>
+    <span class=k >if</span> <span class=n >_widget_type</span><span class=p >:</span>
+        <span class=n >_cls</span><span class=p >,</span> <span class=n >opts</span> <span class=o >=</span> <span class=n >_widget_type</span>
+        <span class=k >return</span> <span class=n >_cls</span><span class=p >,</span> <span class=p >{</span><span class=o >**</span><span class=n >options</span><span class=p >,</span> <span class=o >**</span><span class=n >opts</span><span class=p >}</span>  <span class=c1 ># type: ignore</span>
+
+    <span class=k >return</span> <span class=n >widgets</span><span class=o >.</span><span class=n >EmptyWidget</span><span class=p >,</span> <span class=p >{</span><span class=s2 >"visible"</span><span class=p >:</span> <span class=kc >False</span><span class=p >}</span>
 
 
 <div class=viewcode-block  id=get_widget_class ><a class=viewcode-back  href="../../api/_autosummary/magicgui.type_map.get_widget_class.html#magicgui.type_map.get_widget_class">[docs]</a><span class=k >def</span> <span class=nf >get_widget_class</span><span class=p >(</span>
     <span class=n >value</span><span class=p >:</span> <span class=n >Any</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
-    <span class=n >annotation</span><span class=p >:</span> <span class=nb >type</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
+    <span class=n >annotation</span><span class=p >:</span> <span class=nb >type</span><span class=p >[</span><span class=n >Any</span><span class=p >]</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
     <span class=n >options</span><span class=p >:</span> <span class=n >WidgetOptions</span> <span class=o >|</span> <span class=kc >None</span> <span class=o >=</span> <span class=kc >None</span><span class=p >,</span>
     <span class=n >is_result</span><span class=p >:</span> <span class=nb >bool</span> <span class=o >=</span> <span class=kc >False</span><span class=p >,</span>
 <span class=p >)</span> <span class=o >-&gt;</span> <span class=nb >tuple</span><span class=p >[</span><span class=n >WidgetClass</span><span class=p >,</span> <span class=n >WidgetOptions</span><span class=p >]:</span>
@@ -348,10 +212,8 @@
 <span class=sd >        may be different than the options passed in.</span>
 <span class=sd >    """</span>
     <span class=n >_options</span> <span class=o >=</span> <span class=n >cast</span><span class=p >(</span><span class=n >WidgetOptions</span><span class=p >,</span> <span class=n >options</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >is_result</span><span class=p >:</span>
-        <span class=n >widget_type</span><span class=p >,</span> <span class=n >_options</span> <span class=o >=</span> <span class=n >return_widget_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >,</span> <span class=n >_options</span><span class=p >)</span>
-    <span class=k >else</span><span class=p >:</span>
-        <span class=n >widget_type</span><span class=p >,</span> <span class=n >_options</span> <span class=o >=</span> <span class=n >pick_widget_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >,</span> <span class=n >_options</span><span class=p >)</span>
+
+    <span class=n >widget_type</span><span class=p >,</span> <span class=n >_options</span> <span class=o >=</span> <span class=n >pick_widget_type</span><span class=p >(</span><span class=n >value</span><span class=p >,</span> <span class=n >annotation</span><span class=p >,</span> <span class=n >_options</span><span class=p >,</span> <span class=n >is_result</span><span class=p >)</span>
 
     <span class=k >if</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >widget_type</span><span class=p >,</span> <span class=nb >str</span><span class=p >):</span>
         <span class=n >widget_class</span><span class=p >:</span> <span class=n >WidgetClass</span> <span class=o >=</span> <span class=n >_import_class</span><span class=p >(</span><span class=n >widget_type</span><span class=p >)</span>
@@ -455,7 +317,9 @@
         <span class=p >)</span>
 
     <span class=k >def</span> <span class=nf >_deco</span><span class=p >(</span><span class=n >type_</span><span class=p >):</span>
-        <span class=n >_type_</span> <span class=o >=</span> <span class=n >_evaluate_forwardref</span><span class=p >(</span><span class=n >type_</span><span class=p >)</span>
+        <span class=n >tw</span> <span class=o >=</span> <span class=n >TypeWrapper</span><span class=p >(</span><span class=n >type_</span><span class=p >)</span>
+        <span class=n >tw</span><span class=o >.</span><span class=n >resolve</span><span class=p >()</span>
+        <span class=n >_type_</span> <span class=o >=</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span>
 
         <span class=k >if</span> <span class=n >return_callback</span> <span class=ow >is</span> <span class=ow >not</span> <span class=kc >None</span><span class=p >:</span>
             <span class=n >_validate_return_callback</span><span class=p >(</span><span class=n >return_callback</span><span class=p >)</span>
@@ -502,13 +366,18 @@
 <span class=sd >    list of callable</span>
 <span class=sd >        Where a return callback accepts two arguments (gui, value) and does something.</span>
 <span class=sd >    """</span>
+    <span class=k >if</span> <span class=n >type_</span> <span class=ow >is</span> <span class=n >inspect</span><span class=o >.</span><span class=n >Parameter</span><span class=o >.</span><span class=n >empty</span><span class=p >:</span>
+        <span class=k >return</span> <span class=p >[]</span>
+
     <span class=c1 ># look for direct hits</span>
-    <span class=n >type_</span> <span class=o >=</span> <span class=n >_evaluate_forwardref</span><span class=p >(</span><span class=n >type_</span><span class=p >)</span>
-    <span class=k >if</span> <span class=n >type_</span> <span class=ow >in</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >:</span>
-        <span class=k >return</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >[</span><span class=n >type_</span><span class=p >]</span>
+    <span class=n >tw</span> <span class=o >=</span> <span class=n >TypeWrapper</span><span class=p >(</span><span class=n >type_</span><span class=p >)</span>
+    <span class=n >tw</span><span class=o >.</span><span class=n >resolve</span><span class=p >()</span>
+    <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span> <span class=ow >in</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >:</span>
+        <span class=k >return</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >[</span><span class=n >tw</span><span class=o >.</span><span class=n >outer_type_</span><span class=p >]</span>
+
     <span class=c1 ># look for subclasses</span>
     <span class=k >for</span> <span class=n >registered_type</span> <span class=ow >in</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >:</span>
-        <span class=k >if</span> <span class=n >_is_subclass</span><span class=p >(</span><span class=n >type_</span><span class=p >,</span> <span class=n >registered_type</span><span class=p >):</span>
+        <span class=k >if</span> <span class=n >tw</span><span class=o >.</span><span class=n >is_subclass</span><span class=p >(</span><span class=n >registered_type</span><span class=p >):</span>
             <span class=k >return</span> <span class=n >_RETURN_CALLBACKS</span><span class=p >[</span><span class=n >registered_type</span><span class=p >]</span>
     <span class=k >return</span> <span class=p >[]</span>
 </pre></div> </article> </div> </div> </main> </div> <footer class=md-footer > <div class=md-footer-nav > <nav class="md-footer-nav__inner md-grid"> </a> </nav> </div> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-footer-copyright > <div class=md-footer-copyright__highlight > &#169; Copyright 2020. </div> Created using <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.5.4. and <a href="https://jupyterbook.org/index.html">Jupyter Book</a> and <a href="https://github.com/bashtage/sphinx-material/">Material for Sphinx</a> </div> </div> </div> </footer> <script src="../../_static/javascripts/application.js"></script> <script>app.initialize({version: "1.0.4", url: {base: ".."}})</script>
