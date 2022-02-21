@@ -337,11 +337,12 @@
                 <span class=p >)</span>
         <span class=k >elif</span> <span class=n >widget_type</span> <span class=ow >is</span> <span class=ow >not</span> <span class=kc >None</span><span class=p >:</span>
 
-            <span class=k >if</span> <span class=ow >not</span> <span class=nb >isinstance</span><span class=p >(</span>
-                <span class=n >widget_type</span><span class=p >,</span> <span class=p >(</span><span class=nb >str</span><span class=p >,</span> <span class=n >widgets</span><span class=o >.</span><span class=n >_bases</span><span class=o >.</span><span class=n >Widget</span><span class=p >,</span> <span class=n >WidgetProtocol</span><span class=p >)</span>
+            <span class=k >if</span> <span class=ow >not</span> <span class=nb >isinstance</span><span class=p >(</span><span class=n >widget_type</span><span class=p >,</span> <span class=p >(</span><span class=nb >str</span><span class=p >,</span> <span class=n >WidgetProtocol</span><span class=p >))</span> <span class=ow >and</span> <span class=ow >not</span> <span class=p >(</span>
+                <span class=n >inspect</span><span class=o >.</span><span class=n >isclass</span><span class=p >(</span><span class=n >widget_type</span><span class=p >)</span> <span class=ow >and</span> <span class=nb >issubclass</span><span class=p >(</span><span class=n >widget_type</span><span class=p >,</span> <span class=n >widgets</span><span class=o >.</span><span class=n >Widget</span><span class=p >)</span>
             <span class=p >):</span>
                 <span class=k >raise</span> <span class=ne >TypeError</span><span class=p >(</span>
-                    <span class=s1 >'"widget_type" must be either a string, Widget, or WidgetProtocol'</span>
+                    <span class=s1 >'"widget_type" must be either a string, WidgetProtocol, or '</span>
+                    <span class=s2 >"Widget subclass"</span>
                 <span class=p >)</span>
             <span class=n >_TYPE_DEFS</span><span class=p >[</span><span class=n >_type_</span><span class=p >]</span> <span class=o >=</span> <span class=p >(</span><span class=n >widget_type</span><span class=p >,</span> <span class=n >_options</span><span class=p >)</span>
         <span class=k >elif</span> <span class=s2 >"bind"</span> <span class=ow >in</span> <span class=n >_options</span><span class=p >:</span>
