@@ -228,6 +228,14 @@ class FunctionGui(Container, Generic[_R]):
             self()
 
     @property
+    def call_button(self) -> PushButton | None:
+        """Return the call button.
+
+        If the call button isn't added, returns `None`
+        """
+        return self._call_button
+
+    @property
     def call_count(self) -> int:
         """Return the number of times the function has been called."""
         return self._call_count
